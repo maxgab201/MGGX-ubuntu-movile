@@ -1,0 +1,47 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.mggx.ubuntu'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.mggx.ubuntu'
+        minSdk 26
+        targetSdk 35
+        versionCode 3
+        versionName '0.1.2'
+    }
+
+    buildTypes {
+        debug {
+            minifyEnabled false
+        }
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    packagingOptions {
+        jniLibs {
+            useLegacyPackaging true
+        }
+    }
+
+    androidResources {
+        noCompress += ['rootfs']
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'com.termux.termux-app:terminal-view:0.118.0'
+    implementation 'com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava'
+    implementation 'org.apache.commons:commons-compress:1.27.1'
+}
