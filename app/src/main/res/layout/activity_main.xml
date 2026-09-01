@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#050505">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="12dp"
+        android:paddingEnd="8dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="4dp">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="MGGX Ubuntu"
+                android:textColor="#FFFFFF"
+                android:textStyle="bold"
+                android:textSize="18sp" />
+
+            <TextView
+                android:id="@+id/status"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Preparando…"
+                android:textColor="#A0A0A0"
+                android:textSize="12sp"
+                android:maxLines="2" />
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/wakelock"
+            android:layout_width="56dp"
+            android:layout_height="48dp"
+            android:text="⚡"
+            android:textSize="20sp"
+            android:minWidth="0dp"
+            android:minHeight="0dp" />
+
+        <Button
+            android:id="@+id/menu"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:text="⋮"
+            android:textSize="24sp"
+            android:minWidth="0dp"
+            android:minHeight="0dp" />
+    </LinearLayout>
+
+    <ProgressBar
+        android:id="@+id/progress"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="3dp"
+        android:visibility="gone" />
+
+    <com.termux.view.TerminalView
+        android:id="@+id/terminal"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="#000000"
+        android:focusable="true"
+        android:focusableInTouchMode="true" />
+
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:fillViewport="false"
+        android:scrollbars="none"
+        android:background="#101010">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp">
+
+            <Button android:id="@+id/keyEsc" android:layout_width="64dp" android:layout_height="48dp" android:text="ESC" android:minWidth="0dp" android:minHeight="0dp" />
+            <Button android:id="@+id/keyCtrl" android:layout_width="72dp" android:layout_height="48dp" android:text="CTRL" android:minWidth="0dp" android:minHeight="0dp" />
+            <Button android:id="@+id/keyAlt" android:layout_width="64dp" android:layout_height="48dp" android:text="ALT" android:minWidth="0dp" android:minHeight="0dp" />
+            <Button android:id="@+id/keyTab" android:layout_width="64dp" android:layout_height="48dp" android:text="TAB" android:minWidth="0dp" android:minHeight="0dp" />
+            <Button android:id="@+id/keyLeft" android:layout_width="54dp" android:layout_height="48dp" android:text="←" android:minWidth="0dp" android:minHeight="0dp" />
+            <Button android:id="@+id/keyUp" android:layout_width="54dp" android:layout_height="48dp" android:text="↑" android:minWidth="0dp" android:minHeight="0dp" />
+            <Button android:id="@+id/keyDown" android:layout_width="54dp" android:layout_height="48dp" android:text="↓" android:minWidth="0dp" android:minHeight="0dp" />
+            <Button android:id="@+id/keyRight" android:layout_width="54dp" android:layout_height="48dp" android:text="→" android:minWidth="0dp" android:minHeight="0dp" />
+            <Button android:id="@+id/keyHome" android:layout_width="78dp" android:layout_height="48dp" android:text="HOME" android:minWidth="0dp" android:minHeight="0dp" />
+            <Button android:id="@+id/keyEnd" android:layout_width="68dp" android:layout_height="48dp" android:text="END" android:minWidth="0dp" android:minHeight="0dp" />
+            <Button android:id="@+id/keyPgUp" android:layout_width="72dp" android:layout_height="48dp" android:text="PG↑" android:minWidth="0dp" android:minHeight="0dp" />
+            <Button android:id="@+id/keyPgDn" android:layout_width="72dp" android:layout_height="48dp" android:text="PG↓" android:minWidth="0dp" android:minHeight="0dp" />
+            <Button android:id="@+id/keyPipe" android:layout_width="54dp" android:layout_height="48dp" android:text="|" android:minWidth="0dp" android:minHeight="0dp" />
+            <Button android:id="@+id/keySlash" android:layout_width="54dp" android:layout_height="48dp" android:text="/" android:minWidth="0dp" android:minHeight="0dp" />
+            <Button android:id="@+id/keyDash" android:layout_width="54dp" android:layout_height="48dp" android:text="-" android:minWidth="0dp" android:minHeight="0dp" />
+        </LinearLayout>
+    </HorizontalScrollView>
+
+</LinearLayout>
