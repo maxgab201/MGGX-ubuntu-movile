@@ -1,0 +1,165 @@
+name: Android APK + Release
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Restore stable debug signing key
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.android"
+          base64 -d ci/mggx-debug.keystore.b64 > "$HOME/.android/debug.keystore"
+          chmod 600 "$HOME/.android/debug.keystore"
+          keytool -list -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey >/dev/null
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android platform
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+
+      - name: Bundle PRoot runtime for arm64-v8a
+        shell: bash
+        run: |
+          set -euo pipefail
+          REPO=https://packages-cf.termux.dev/apt/termux-main
+          INDEX="$REPO/dists/stable/main/binary-aarch64/Packages"
+          OUT=app/src/main/jniLibs/arm64-v8a
+          mkdir -p "$OUT" /tmp/termuxpkgs
+          curl --retry 4 --retry-delay 2 --retry-all-errors -fsSL "$INDEX" -o /tmp/Packages
+
+          fetch_pkg() {
+            local pkg="$1"
+            local filename
+            filename=$(awk -v p="$pkg" '
+              $1=="Package:" {ok=($2==p)}
+              ok && $1=="Filename:" {print $2; exit}
+            ' /tmp/Packages)
+            test -n "$filename"
+            curl --retry 4 --retry-delay 2 --retry-all-errors -fsSL "$REPO/$filename" -o "/tmp/termuxpkgs/$pkg.deb"
+            dpkg-deb -x "/tmp/termuxpkgs/$pkg.deb" "/tmp/termuxpkgs/$pkg"
+          }
+
+          fetch_pkg proot
+          fetch_pkg libtalloc
+          fetch_pkg libandroid-shmem
+
+          PROOT=$(find /tmp/termuxpkgs/proot -type f -path '*/bin/proot' | head -n1)
+          LOADER=$(find /tmp/termuxpkgs/proot -type f -path '*/libexec/proot/loader' | head -n1)
+          TALLOC=$(find /tmp/termuxpkgs/libtalloc -type f -name 'libtalloc.so*' | head -n1)
+          SHMEM=$(find /tmp/termuxpkgs/libandroid-shmem -type f -name 'libandroid-shmem.so*' | head -n1)
+
+          test -n "$PROOT" && test -n "$LOADER" && test -n "$TALLOC" && test -n "$SHMEM"
+          cp -L "$PROOT" "$OUT/libproot.so"
+          cp -L "$LOADER" "$OUT/libproot-loader.so"
+          cp -L "$TALLOC" "$OUT/libtalloc.so"
+          cp -L "$SHMEM" "$OUT/libandroid-shmem.so"
+
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq patchelf
+          patchelf --replace-needed libtalloc.so.2 libtalloc.so "$OUT/libproot.so"
+          chmod 755 "$OUT/libproot.so" "$OUT/libproot-loader.so"
+
+      - name: Bundle verified Ubuntu Base rootfs
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOTFS="ubuntu-base-26.04-base-arm64.tar.gz"
+          DEST="app/src/main/assets/ubuntu-base-arm64.rootfs"
+          mkdir -p app/src/main/assets /tmp/ubuntu-rootfs
+
+          download() {
+            local file="$1"
+            local out="$2"
+            for base in \
+              "https://cdimage.ubuntu.com/ubuntu-base/releases/26.04/release" \
+              "https://www.cdimage.ubuntu.com/ubuntu-base/releases/26.04/release"; do
+              if curl --connect-timeout 20 --max-time 180 --retry 8 --retry-delay 3 --retry-all-errors -fsSL "$base/$file" -o "$out"; then
+                return 0
+              fi
+            done
+            return 1
+          }
+
+          download SHA256SUMS /tmp/ubuntu-rootfs/SHA256SUMS
+          download "$ROOTFS" "/tmp/ubuntu-rootfs/$ROOTFS"
+          EXPECTED=$(awk -v f="$ROOTFS" '{n=$2; sub(/^\*/, "", n); if (n==f) {print $1; exit}}' /tmp/ubuntu-rootfs/SHA256SUMS)
+          ACTUAL=$(sha256sum "/tmp/ubuntu-rootfs/$ROOTFS" | awk '{print $1}')
+          test -n "$EXPECTED"
+          test "$ACTUAL" = "$EXPECTED"
+          test "$(stat -c%s "/tmp/ubuntu-rootfs/$ROOTFS")" -gt 30000000
+          cp "/tmp/ubuntu-rootfs/$ROOTFS" "$DEST"
+          echo "$ACTUAL" > /tmp/ubuntu-rootfs/EXPECTED_SHA256
+
+      - name: Build debug APK
+        run: gradle :app:assembleDebug --stacktrace
+
+      - name: Verify APK contents and rootfs integrity
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK=app/build/outputs/apk/debug/app-debug.apk
+          unzip -l "$APK" | grep -E 'lib/arm64-v8a/lib(proot|proot-loader|talloc|android-shmem)\.so'
+          unzip -p "$APK" assets/ubuntu-base-arm64.rootfs > /tmp/rootfs-from-apk
+          test "$(sha256sum /tmp/rootfs-from-apk | awk '{print $1}')" = "$(cat /tmp/ubuntu-rootfs/EXPECTED_SHA256)"
+          tar -tzf /tmp/rootfs-from-apk | grep -q '^./bin/bash$\|^bin/bash$'
+          tar -tzf /tmp/rootfs-from-apk | grep -q '^./usr/bin/env$\|^usr/bin/env$'
+          tar -tzf /tmp/rootfs-from-apk | grep -q '^./usr/bin/apt$\|^usr/bin/apt$'
+          tar -tzf /tmp/rootfs-from-apk | grep -q '^./etc/passwd$\|^etc/passwd$'
+          tar -tzf /tmp/rootfs-from-apk | grep -q '^./etc/os-release$\|^etc/os-release$'
+
+      - name: Generate SHA-256
+        shell: bash
+        run: |
+          cp app/build/outputs/apk/debug/app-debug.apk MGGX-Ubuntu-Terminal-v0.1.2-debug.apk
+          sha256sum MGGX-Ubuntu-Terminal-v0.1.2-debug.apk | tee SHA256SUMS.txt
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mggx-ubuntu-terminal-v0.1.2
+          path: |
+            MGGX-Ubuntu-Terminal-v0.1.2-debug.apk
+            SHA256SUMS.txt
+          if-no-files-found: error
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG=v0.1.2
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" MGGX-Ubuntu-Terminal-v0.1.2-debug.apk SHA256SUMS.txt --clobber
+          else
+            gh release create "$TAG" MGGX-Ubuntu-Terminal-v0.1.2-debug.apk SHA256SUMS.txt \
+              --target "$GITHUB_SHA" \
+              --title "MGGX Ubuntu Mobile v0.1.2" \
+              --notes "Primera release pública. Ubuntu Base 26.04 ARM64 sobre PRoot, instalación offline desde el APK, terminal tipo Termux, barra de teclas PC, /sdcard, Internet, permisos Android y wake lock."
+          fi
