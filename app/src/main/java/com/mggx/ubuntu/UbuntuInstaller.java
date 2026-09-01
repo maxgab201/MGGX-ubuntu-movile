@@ -101,7 +101,7 @@ public final class UbuntuInstaller {
 
             listener.onStage("Validando Ubuntu…", -1);
             validateRoot(staging);
-            writeText(new File(staging, MARKER), "MGGX Ubuntu Mobile 0.1.2\n");
+            writeText(new File(staging, MARKER), "MGGX Ubuntu Mobile 0.1.3\n");
 
             listener.onStage("Activando Ubuntu…", -1);
             deleteRecursive(backup);

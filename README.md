@@ -2,7 +2,7 @@
 
 Una terminal **Ubuntu real en Android**, ejecutada en userspace mediante **PRoot**, con una interfaz de terminal basada en las librerías de Termux.
 
-> Estado actual: **v0.1.2** — primera versión funcional en ARM64.
+> Estado actual: **v0.1.3** — primera versión funcional en ARM64.
 
 ## Qué hace
 
