@@ -124,14 +124,27 @@ jobs:
         run: |
           set -euo pipefail
           APK=app/build/outputs/apk/debug/app-debug.apk
-          unzip -l "$APK" | grep -E 'lib/arm64-v8a/lib(proot|proot-loader|talloc|android-shmem)\.so'
+
+          unzip -l "$APK" > /tmp/apk-list.txt
+          grep -Eq 'lib/arm64-v8a/libproot\.so$' /tmp/apk-list.txt
+          grep -Eq 'lib/arm64-v8a/libproot-loader\.so$' /tmp/apk-list.txt
+          grep -Eq 'lib/arm64-v8a/libtalloc\.so$' /tmp/apk-list.txt
+          grep -Eq 'lib/arm64-v8a/libandroid-shmem\.so$' /tmp/apk-list.txt
+          grep -Eq 'assets/ubuntu-base-arm64\.rootfs$' /tmp/apk-list.txt
+
           unzip -p "$APK" assets/ubuntu-base-arm64.rootfs > /tmp/rootfs-from-apk
-          test "$(sha256sum /tmp/rootfs-from-apk | awk '{print $1}')" = "$(cat /tmp/ubuntu-rootfs/EXPECTED_SHA256)"
-          tar -tzf /tmp/rootfs-from-apk | grep -q '^./bin/bash$\|^bin/bash$'
-          tar -tzf /tmp/rootfs-from-apk | grep -q '^./usr/bin/env$\|^usr/bin/env$'
-          tar -tzf /tmp/rootfs-from-apk | grep -q '^./usr/bin/apt$\|^usr/bin/apt$'
-          tar -tzf /tmp/rootfs-from-apk | grep -q '^./etc/passwd$\|^etc/passwd$'
-          tar -tzf /tmp/rootfs-from-apk | grep -q '^./etc/os-release$\|^etc/os-release$'
+          ACTUAL_APK_ROOTFS=$(sha256sum /tmp/rootfs-from-apk | awk '{print $1}')
+          EXPECTED_ROOTFS=$(cat /tmp/ubuntu-rootfs/EXPECTED_SHA256)
+          test "$ACTUAL_APK_ROOTFS" = "$EXPECTED_ROOTFS"
+
+          tar -tzf /tmp/rootfs-from-apk > /tmp/rootfs-list.txt
+          grep -Eq '^(\./)?bin/bash$' /tmp/rootfs-list.txt
+          grep -Eq '^(\./)?usr/bin/env$' /tmp/rootfs-list.txt
+          grep -Eq '^(\./)?usr/bin/apt$' /tmp/rootfs-list.txt
+          grep -Eq '^(\./)?etc/passwd$' /tmp/rootfs-list.txt
+          grep -Eq '^(\./)?etc/os-release$' /tmp/rootfs-list.txt
+
+          echo "Rootfs SHA-256 verified: $ACTUAL_APK_ROOTFS"
 
       - name: Generate SHA-256
         shell: bash
