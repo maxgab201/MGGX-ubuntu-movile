@@ -138,11 +138,11 @@ jobs:
           test "$ACTUAL_APK_ROOTFS" = "$EXPECTED_ROOTFS"
 
           tar -tzf /tmp/rootfs-from-apk > /tmp/rootfs-list.txt
-          grep -Eq '^(\./)?bin/bash$' /tmp/rootfs-list.txt
-          grep -Eq '^(\./)?usr/bin/env$' /tmp/rootfs-list.txt
-          grep -Eq '^(\./)?usr/bin/apt$' /tmp/rootfs-list.txt
+          grep -Eq '^(\./)?(usr/bin/bash|bin/bash)$' /tmp/rootfs-list.txt
+          grep -Eq '^(\./)?(usr/bin/env|bin/env)$' /tmp/rootfs-list.txt
+          grep -Eq '^(\./)?(usr/bin/apt|bin/apt)$' /tmp/rootfs-list.txt
           grep -Eq '^(\./)?etc/passwd$' /tmp/rootfs-list.txt
-          grep -Eq '^(\./)?etc/os-release$' /tmp/rootfs-list.txt
+          grep -Eq '^(\./)?(etc/os-release|usr/lib/os-release)$' /tmp/rootfs-list.txt
 
           echo "Rootfs SHA-256 verified: $ACTUAL_APK_ROOTFS"
 
