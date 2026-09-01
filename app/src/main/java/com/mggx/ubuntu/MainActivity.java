@@ -109,7 +109,7 @@ public class MainActivity extends Activity implements TerminalSessionClient, Ter
             try {
                 UbuntuInstaller.install(this, (stage, percent) -> {
                     installStage = stage;
-                    runOnUiThread(() -> {
+                    runOnUiThread(() -> ifAlive(() -> {
                         status.setText(stage);
                         if (percent >= 0) {
                             progress.setIndeterminate(false);
@@ -117,25 +117,40 @@ public class MainActivity extends Activity implements TerminalSessionClient, Ter
                         } else {
                             progress.setIndeterminate(true);
                         }
-                    });
+                    }));
                 });
-                runOnUiThread(() -> {
+                runOnUiThread(() -> ifAlive(() -> {
                     installing = false;
                     progress.setVisibility(ProgressBar.GONE);
                     startUbuntu();
-                });
+                }));
             } catch (Throwable e) {
                 Log.e(TAG, "Ubuntu install failed at " + installStage, e);
-                runOnUiThread(() -> showInstallError(e));
+                runOnUiThread(() -> ifAlive(() -> showInstallError(e)));
             }
         });
+    }
+
+    /** Evita tocar vistas o arrancar sesiones después de que la Activity ya se destruyó. */
+    private void ifAlive(Runnable action) {
+        if (!isFinishing() && !isDestroyed()) action.run();
+    }
+
+    private String appVersionLabel() {
+        try {
+            android.content.pm.PackageInfo info = getPackageManager().getPackageInfo(getPackageName(), 0);
+            long code = Build.VERSION.SDK_INT >= 28 ? info.getLongVersionCode() : info.versionCode;
+            return info.versionName + " (" + code + ")";
+        } catch (PackageManager.NameNotFoundException e) {
+            return "desconocida";
+        }
     }
 
     private void showInstallError(Throwable error) {
         installing = false;
         progress.setVisibility(ProgressBar.GONE);
         String details = "Etapa: " + installStage
-                + "\nApp: 0.1.2 (3)"
+                + "\nApp: " + appVersionLabel()
                 + "\nAndroid: " + Build.VERSION.RELEASE + " / API " + Build.VERSION.SDK_INT
                 + "\nABI: " + (Build.SUPPORTED_ABIS.length > 0 ? Build.SUPPORTED_ABIS[0] : "desconocida")
                 + "\n\n" + error;
@@ -305,7 +320,7 @@ public class MainActivity extends Activity implements TerminalSessionClient, Ter
                     terminalView.attachSession(null);
                     worker.execute(() -> {
                         UbuntuInstaller.removeInstallation(this);
-                        runOnUiThread(this::installUbuntu);
+                        runOnUiThread(() -> ifAlive(this::installUbuntu));
                     });
                 })
                 .setNegativeButton("Cancelar", null)
